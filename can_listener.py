@@ -17,9 +17,10 @@ Usage:
     python can_listener.py --list-devices  # list microphones
     python can_listener.py --threshold 0.9 # more sensitive (default from meta.json)
 
-While the detector is running you can also fire the trigger by hand with a global
-hotkey (default Cmd+Shift+J) — handy for testing or launching on demand without
-opening a can. Customise it with --hotkey and the launched program with --launch.
+Runs on macOS, Windows and Linux. While the detector is running you can also fire
+the trigger by hand with a global hotkey (default Cmd+Shift+J on macOS, Ctrl+Alt+J
+elsewhere) — handy for testing or launching on demand without opening a can.
+Customise it with --hotkey and the launched program with --launch.
 """
 
 import os
@@ -28,6 +29,7 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 import argparse
 import json
 import queue
+import shutil
 import subprocess
 import sys
 import time
@@ -52,38 +54,74 @@ BLOCK_SAMPLES = int(0.1 * SAMPLE_RATE)
 YAMNET_HANDLE = "https://tfhub.dev/google/yamnet/1"
 
 COOLDOWN_SEC = 10.0
-DEFAULT_HOTKEY = "<cmd>+<shift>+j"
 
+IS_MAC = sys.platform == "darwin"
+IS_WINDOWS = sys.platform.startswith("win")
+
+# Default manual-trigger hotkey. macOS has a Cmd key; Windows/Linux use Ctrl+Alt
+# (Ctrl+Shift+J is often a browser DevTools shortcut, so we avoid it).
+DEFAULT_HOTKEY = "<cmd>+<shift>+j" if IS_MAC else "<ctrl>+<alt>+j"
 
 VOICE_PATH = os.path.join(HERE, "assets", "voice.wav")
 
-# What to launch on a trigger, in priority order:
-#   1. --launch "cmd"  (CLI flag)     2. $CAN_LAUNCH_CMD     3. this default.
-# This is the single "game launch path" — point it at your game, e.g.
-#   open -a 'World of Tanks'    or    open -a Steam
-DEFAULT_LAUNCH_CMD = ["open", "-a", "Google Chrome"]
+
+def default_launch_cmd():
+    """Placeholder launch target per OS — override with --launch / $CAN_LAUNCH_CMD.
+
+    This is the single "game launch path". Point it at your game, e.g.
+        macOS:    open -a 'World of Tanks'
+        Windows:  start "" "C:\\Games\\World_of_Tanks\\WorldOfTanks.exe"
+        Linux:    /path/to/wot.sh    (or  xdg-open steam://rungameid/...)
+    """
+    if IS_MAC:
+        return 'open -a "Google Chrome"'
+    if IS_WINDOWS:
+        return 'start "" chrome'
+    return "xdg-open https://www.google.com"
 
 
 def announce():
-    """Play the funny Russian announcement (non-blocking). Regenerate via make_voice.sh."""
-    if os.path.exists(VOICE_PATH):
-        subprocess.Popen(["afplay", VOICE_PATH],
+    """Play the announcement (non-blocking), cross-platform.
+
+    Preferred path plays through sounddevice (already a dependency, works on
+    macOS/Windows/Linux with no external audio binary). Falls back to a system
+    player if that fails. Regenerate/replace the clip via make_voice.sh or by
+    dropping your own assets/voice.wav.
+    """
+    if not os.path.exists(VOICE_PATH):
+        return
+    try:
+        import scipy.io.wavfile as wavio
+        sr, data = wavio.read(VOICE_PATH)
+        sd.play(data, sr)               # non-blocking; own output stream
+        return
+    except Exception:
+        pass
+    if IS_WINDOWS:
+        try:
+            import winsound
+            winsound.PlaySound(VOICE_PATH, winsound.SND_FILENAME | winsound.SND_ASYNC)
+            return
+        except Exception:
+            return
+    player = (["afplay"] if IS_MAC else
+              next(([p] for p in ("paplay", "aplay") if shutil.which(p)),
+                   (["ffplay", "-nodisp", "-autoexit"] if shutil.which("ffplay") else None)))
+    if player:
+        subprocess.Popen(player + [VOICE_PATH],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def launch_target(launch_cmd=None):
     """Action performed on a trigger: announce, then launch the target program.
 
-    launch_cmd (from --launch) wins; then $CAN_LAUNCH_CMD; then DEFAULT_LAUNCH_CMD.
+    launch_cmd (from --launch) wins; then $CAN_LAUNCH_CMD; then the per-OS default.
     Set CAN_NO_VOICE=1 to skip the announcement.
     """
     if not os.environ.get("CAN_NO_VOICE"):
         announce()
-    cmd = launch_cmd or os.environ.get("CAN_LAUNCH_CMD")
-    if cmd:
-        subprocess.run(cmd, shell=True, check=False)
-    else:
-        subprocess.run(DEFAULT_LAUNCH_CMD, check=False)
+    cmd = launch_cmd or os.environ.get("CAN_LAUNCH_CMD") or default_launch_cmd()
+    subprocess.run(cmd, shell=True, check=False)
 
 
 def start_hotkey(combo, on_fire):
