@@ -1,0 +1,14 @@
+{
+  "threshold": 0.88,
+  "sample_rate": 16000,
+  "yamnet_handle": "https://tfhub.dev/google/yamnet/1",
+  "smoothing": {
+    "policy": "k_of_n",
+    "k": 2,
+    "n": 3
+  },
+  "cv_mean_recall": 0.9168408826945413,
+  "cv_mean_fp_rate": 0.094,
+  "n_positives": 2993,
+  "n_negatives": 48000
+}

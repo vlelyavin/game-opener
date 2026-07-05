@@ -1,0 +1,24 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# ESC-50 (~600MB) — train.py re-downloads it automatically
+data/
+
+# raw yt-dlp downloads (licensing: local training only)
+collected_raw/
+
+# filtered web clips (licensing: local training only)
+references_web/
+
+# Training clips downloaded from YouTube — kept out of the repo for the same
+# licensing reason as references_web/. The shipped artifact is the trained model
+# in models/. Drop your own recordings into references/ and retrain locally.
+references/*.mp4
+references/*.m4a
+references/*.mp3
+references/*.wav
+references/*.webm
+references/*.ogg
+references/*.opus

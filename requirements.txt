@@ -1,0 +1,16 @@
+# Python 3.12 (TensorFlow has no 3.14 wheels yet).
+#
+# Runtime (can_listener.py):
+tensorflow
+tensorflow-hub
+sounddevice
+numpy
+scipy
+pynput          # global hotkey for the manual trigger (optional; detector runs without it)
+setuptools<81   # tensorflow-hub imports legacy pkg_resources, removed in setuptools 81+
+
+# Training / evaluation only (train.py, eval.py):
+scikit-learn
+
+# Web data collection only (collect_web_positives.py):
+yt-dlp
