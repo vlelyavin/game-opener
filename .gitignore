@@ -2,6 +2,10 @@
 __pycache__/
 *.pyc
 .DS_Store
+*:Zone.Identifier
+
+# local scratch copy of a previous version — not part of the repo
+old/
 
 # ESC-50 (~600MB) — train.py re-downloads it automatically
 data/

@@ -3,11 +3,19 @@
 # Runtime (can_listener.py):
 tensorflow
 tensorflow-hub
-sounddevice
+sounddevice      # mic capture + detection-sound playback (bundles PortAudio)
 numpy
 scipy
-pynput          # global hotkey for the manual trigger (optional; detector runs without it)
 setuptools<81   # tensorflow-hub imports legacy pkg_resources, removed in setuptools 81+
+
+# Optional: only needed to play a non-WAV detection sound (.ogg/.opus/.flac).
+# WAV files (the default assets/tank.wav) play via scipy above — no need for this.
+# soundfile
+
+# Optional: global hotkey for hotkey_trigger.py (manual trigger for filming).
+# Without it, hotkey_trigger.py falls back to "press ENTER" mode.
+# NOTE: on Linux the `keyboard` package needs root (sudo) to grab keys globally.
+keyboard
 
 # Training / evaluation only (train.py, eval.py):
 scikit-learn
